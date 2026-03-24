@@ -17,8 +17,12 @@ class SparkDataCheck:
         self.df = data
 
     @classmethod
-    def makespark(cls, spark, path):
-        sparkdf = spark.read.load(path, format = "csv")
+    def makespark(cls, spark, path): #, delimiter):
+        sparkdf = spark.read.format("csv") \
+                       .option("header", "true") \
+                       .option("inferSchema", "true") \
+                       .load(path)
+        #sparkdf = spark.read.load(path, format = "csv", delimiter = delimiter)
         return cls(sparkdf)
     
     @classmethod
