@@ -29,11 +29,10 @@ class SparkDataCheck:
         pdf = spark.createDataFrame(pd_dataframe)
         return cls(pdf)
     
-    def threshold(column, lower, upper):
-        if column.dtypes not in ("float", "int", "longint", \
-                                                "bigint", "double", "integer"):
+    def numrange(df, column, lower, upper):
+        if df[column].dtypes not in ("float", "int", "longint", \
+                                    "bigint", "double", "integer"):
             print("The column must be numeric!")
-            return column
+            return df[column]
         else:
-            column.append().between(lower, upper)
-            return
+            return df.assign(Result = df[column].between(lower, upper))
