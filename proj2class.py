@@ -10,22 +10,30 @@ import pandas as pd
 
 class SparkDataCheck:
     """
-    Class functions on a Spark SQL style data frame
+    Class functions on a Spark SQL style data frame.
     """
 
     def __init__(self, data):
         self.df = data
 
     @classmethod
-    def makespark(cls, spark, path): #, delimiter):
-        sparkdf = spark.read.format("csv") \
-                       .option("header", "true") \
-                       .option("inferSchema", "true") \
-                       .load(path)
-        #sparkdf = spark.read.load(path, format = "csv", delimiter = delimiter)
+    def makespark(cls, spark, path , delimiter):
+        sparkdf = spark.read.load(path, \
+                                  format = "csv", \
+                                  delimiter = delimiter, \
+                                  header = True)
         return cls(sparkdf)
     
     @classmethod
     def makepdf(cls, spark, pd_dataframe):
         pdf = spark.createDataFrame(pd_dataframe)
         return cls(pdf)
+    
+    def threshold(column, lower, upper):
+        if column.dtypes not in ("float", "int", "longint", \
+                                                "bigint", "double", "integer"):
+            print("The column must be numeric!")
+            return column
+        else:
+            column.append().between(lower, upper)
+            return
