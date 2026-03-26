@@ -13,46 +13,84 @@ class SparkDataCheck:
     Class functions on a Spark SQL style data frame.
     """
 
+    neg_infty = float("-inf") # create parameters for pos/neg infinity
+    infty = float("inf")
+    
     def __init__(self, data):
         self.df = data
 
+    # used to read in a CSV file as a spark dataframe
     @classmethod
-    def makespark(cls, spark, path, delimiter):
+    def read_spark(cls, spark, path, delimiter):
         sparkdf = spark.read.load(path, \
                                   format = "csv", \
                                   delimiter = delimiter, \
+                                  inferSchema = True,
                                   header = True)
         return cls(sparkdf)
-    
-    @classmethod
-    def makepdf(cls, spark, pd_dataframe):
-        pdf = spark.createDataFrame(pd_dataframe)
-        return cls(pdf)
-    
-    def numrange(self, column, lower, upper):
-        if self[column].dtypes not in ("float", "int", "longint", \
-                                       "bigint", "double", "integer"):
+
+    # used to convert a pandas dataframe to spark
+    def convert_sdf(cls, spark, pd_dataframe):
+        sparkdf = spark.createDataFrame(pd_dataframe)
+        return cls(sparkdf)
+
+    # If the column data is numeric, returns a dataframe with an extra column
+    # of boolean values; range is all real numbers unless bounds are provided
+    def numrange(self, column, lower = neg_infty, upper = infty):
+        if self.df.select(column).dtypes[0][1] in ("float", "int", "longint", \
+                                                "bigint", "double", "integer"):
+                self = self.df.withColumn(colName = "Result", \
+                                          col = F.col(column) \
+                                          .between(lower, upper))
+                return self                                  
+        else:
             print("The column must be numeric!")
             return self
-        else:
-            self = self.assign(Result = self[column].between(lower, upper))
-            return self
 
+    # If the column data is string-type, returns a dataframe with an extra
+    # column of boolean values, whether the string in a cell matches given str
     def strrange(self, column, string):
-        if self[column].dtypes in ("float", "int", "longint", \
-                                   "bigint", "double", "integer"):
-            print("The column must contain character strings!")
+        if self.df.select(column).dtypes[0][1] in ("float", "int", "longint", \
+                                                "bigint", "double", "integer"):
+            print("The column must contain strings!")
             return self
         else:
-            self = self.assign(Result = self[column].isin([string]))
+            self = self.df.withColumn(colName = "Result", \
+                                      col = F.col(column) \
+                                      .contains(string))
             return self
-
-    def nulrange(self, column):
-        self = self.assign(Result = self[column].isnull())
-        return self
     
-    def minmax(self, column = None, groupby = None):
-        if groupby ==  None:
-            if column != None:
-                return F"min: {self.min(column)} max: {self.max()}"
-        return
+# I WAS NEARLY DONE WITH THE ASSIGNMENT BEFORE I REALIZED I HAD COMPLETELY 
+# MISSED THE INTENT. BELOW IS THE WORK I HAD COMPLETED UNTIL THAT POINT WHICH
+# UNFORTUNATELY ONLY WORKS WITH PANDAS DATAFRAMES
+#
+#    def numrange(self, column, lower, upper):
+#        if self[column].dtypes not in ("float", "int", "longint", \
+#                                       "bigint", "double", "integer"):
+#            print("The column must be numeric!")
+#            return self
+#        else:
+#            self = self.assign(Result = self[column].between(lower, upper))
+#            return self
+#
+#    def strrange(self, column, string):
+#        if self[column].dtypes in ("float", "int", "longint", \
+#                                   "bigint", "double", "integer"):
+#            print("The column must contain character strings!")
+#            return self
+#        else:
+#            self = self.assign(Result = self[column].isin([string]))
+#            return self
+#
+#    def nulrange(self, column):
+#        self = self.assign(Result = self[column].isnull())
+#        return self
+#
+# I REALIZED MY MISTAKE AT THIS METHOD
+#
+#    def minmax(self, column = None, groupby = None):
+#        if groupby ==  None:
+#            if column != None:
+#                return pd.DataFrame(self.select(F.min(column)), \
+#                                    self.select(F.max(column)))
+#        return
