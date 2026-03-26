@@ -17,7 +17,7 @@ class SparkDataCheck:
         self.df = data
 
     @classmethod
-    def makespark(cls, spark, path , delimiter):
+    def makespark(cls, spark, path, delimiter):
         sparkdf = spark.read.load(path, \
                                   format = "csv", \
                                   delimiter = delimiter, \
@@ -29,10 +29,30 @@ class SparkDataCheck:
         pdf = spark.createDataFrame(pd_dataframe)
         return cls(pdf)
     
-    def numrange(df, column, lower, upper):
-        if df[column].dtypes not in ("float", "int", "longint", \
-                                    "bigint", "double", "integer"):
+    def numrange(self, column, lower, upper):
+        if self[column].dtypes not in ("float", "int", "longint", \
+                                       "bigint", "double", "integer"):
             print("The column must be numeric!")
-            return df[column]
+            return self
         else:
-            return df.assign(Result = df[column].between(lower, upper))
+            self = self.assign(Result = self[column].between(lower, upper))
+            return self
+
+    def strrange(self, column, string):
+        if self[column].dtypes in ("float", "int", "longint", \
+                                   "bigint", "double", "integer"):
+            print("The column must contain character strings!")
+            return self
+        else:
+            self = self.assign(Result = self[column].isin([string]))
+            return self
+
+    def nulrange(self, column):
+        self = self.assign(Result = self[column].isnull())
+        return self
+    
+    def minmax(self, column = None, groupby = None):
+        if groupby ==  None:
+            if column != None:
+                return F"min: {self.min(column)} max: {self.max()}"
+        return
