@@ -30,6 +30,7 @@ class SparkDataCheck:
         return cls(sparkdf)
 
     # used to convert a pandas dataframe to spark
+    @classmethod
     def convert_sdf(cls, spark, pd_dataframe):
         sparkdf = spark.createDataFrame(pd_dataframe)
         return cls(sparkdf)
@@ -59,6 +60,42 @@ class SparkDataCheck:
                                       col = F.col(column) \
                                       .contains(string))
             return self
+        
+    # For a column, returns a dataframe with an extra column of boolean values,
+    # whether a value in a cell is missing (NULL), dependent upon whether the
+    # column contains strings or values
+    def nulrange(self, column):
+        if self.df.select(column).dtypes[0][1] in ("float", "int", "longint", \
+                                                "bigint", "double", "integer"):
+            self = self.df.withColumn(colName = "Result", \
+                                      col = F.col(column) \
+                                      .contains("NaN"))
+            return self
+        else:
+            self = self.df.withColumn(colName = "Result", 
+                                      col = F.col(column) \
+                                      .isNull())
+            return self
+    
+    # For a specified column and groupby column, computes the min and max
+    # values of a numeric column and returns the results as a Pandas dataframe
+    def minmax(self, column = None, groupby = None):
+        if self.df.select(column).dtypes[0][1] in ("float", "int", "longint", \
+                                                "bigint", "double", "integer"):
+            if groupby == None:
+                x = self.df.agg({column : "min"}).toPandas()
+                y = self.df.agg({column : "max"}).toPandas()
+                z = x.merge(y, how = "right", \
+                            left_index = True, right_index = True)
+                return z
+            else:
+                x = self.df.groupby(groupby).agg({column : "min"}).toPandas()
+                y = self.df.groupby(groupby).agg({column : "max"}).toPandas()
+                z = x.merge(y)
+                return z
+        else:
+            print("The column must be numeric!")
+            return
     
 # I WAS NEARLY DONE WITH THE ASSIGNMENT BEFORE I REALIZED I HAD COMPLETELY 
 # MISSED THE INTENT. BELOW IS THE WORK I HAD COMPLETED UNTIL THAT POINT WHICH
